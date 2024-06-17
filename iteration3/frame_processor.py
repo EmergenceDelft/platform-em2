@@ -32,8 +32,8 @@ class FrameProcessor:
         :return: A 3x3 NumPy array containing the differences for each grid square.
         """
 
-        frame1_cropped = self.blur_frame(self.crop_frame(frame1))
-        frame2_cropped = self.blur_frame(self.crop_frame(frame2))
+        frame1_cropped = self.crop_frame(frame1)
+        frame2_cropped = self.crop_frame(frame2)
 
         diff = self.compute_diff(frame1_cropped, frame2_cropped)
 
@@ -68,8 +68,8 @@ class FrameProcessor:
       :param frame1: First frame as a NumPy array.
       :param frame2: Second frame as a NumPy array.
       """
-      frame1_cropped = self.blur_frame(self.crop_frame(frame1))
-      frame2_cropped = self.blur_frame(self.crop_frame(frame2))
+      frame1_cropped = self.crop_frame(frame1)
+      frame2_cropped = self.crop_frame(frame2)
 
       # Convert the difference frame to grayscale
       gray_diff = self.compute_diff(frame1_cropped, frame2_cropped)

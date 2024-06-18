@@ -13,6 +13,8 @@ class MidiSender:
         print(f"Error: MIDI port '{port_name}' not found.")
         return
     self.open_port()
+    self.min_midi = 0
+    self.max_midi = 127
 
   def open_port (self):
     """
@@ -23,6 +25,9 @@ class MidiSender:
     else:
       self.output = mido.open_output()
 
+  def reset(self):
+    self.min_midi = 0
+    self.max_midi = 127
   def close_port (self):
     """
     Close the MIDI port.

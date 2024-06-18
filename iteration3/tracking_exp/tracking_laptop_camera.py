@@ -8,23 +8,23 @@ import datetime
 model = YOLO("yolov8n.pt")
 
 # Open the first camera connected to the system
-cap = cv2.VideoCapture(1)
+cap = cv2.VideoCapture("top-side.mp4")
 cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
 cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 1024)
-width = cap.get(cv2.CAP_PROP_FRAME_WIDTH)
-height = cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
+width = int (cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+height = int (cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
 print(width, height)
 
 # Get class names
 classes = model.names
 
 
-CONFIDENCE_THRESHOLD = 0.6
+CONFIDENCE_THRESHOLD = 0.3
 GREEN = (0, 255, 0)
 
 # Define the codec and create VideoWriter object
 fourcc = cv2.VideoWriter_fourcc(*'XVID')  # Codec for the video
-out = cv2.VideoWriter('output.avi', fourcc, 20.0, (640, 480))
+out = cv2.VideoWriter('output.avi', fourcc, 30.0, (width, height))
 
 while True:
     # start time to compute the fps
@@ -40,6 +40,7 @@ while True:
 
     # run the YOLO model on the frame
     detections = model(frame)[0]
+    print(detections)
 
     for data in detections.boxes.data.tolist():
         # extract the confidence (i.e., probability) associated with the detection
@@ -47,28 +48,20 @@ while True:
 
         # filter out weak detections by ensuring the
         # confidence is greater than the minimum confidence
-        if float(confidence) < CONFIDENCE_THRESHOLD and data[5] != 0:
-            continue
-
-        # if the confidence is greater than the minimum confidence,
-        # draw the bounding box on the frame
-        xmin, ymin, xmax, ymax = int(data[0]), int(data[1]), int(data[2]), int(data[3])
-        cv2.rectangle(frame, (xmin, ymin), (xmax, ymax), GREEN, 2)
-
-
-        # end time to compute the fps
-        end = datetime.datetime.now()
-        # show the time it took to process 1 frame
-        total = (end - start).total_seconds()
-        #print(f"Time to process 1 frame: {total * 1000:.0f} milliseconds")
+        if float(confidence) > CONFIDENCE_THRESHOLD and classes[data[5]] == 'person':
+            # if the confidence is greater than the minimum confidence,
+            # draw the bounding box on the frame
+            #print(data)
+            xmin, ymin, xmax, ymax = int(data[0]), int(data[1]), int(data[2]), int(data[3])
+            cv2.rectangle(frame, (xmin, ymin), (xmax, ymax), GREEN, 2)
 
 
-        # show the frame to our screen
-        cv2.imshow("Frame", frame)
-        out.write(frame)
+    # show the frame to our screen
+    cv2.imshow("Frame", frame)
+    out.write(frame)
 
-        if cv2.waitKey(1) == ord("q"):
-            break
+    if cv2.waitKey(1) == ord("q"):
+        break
 
 # Release the webcam and close all OpenCV windows
 cap.release()

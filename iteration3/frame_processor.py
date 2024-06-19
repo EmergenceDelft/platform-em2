@@ -2,9 +2,10 @@ import numpy as np
 import cv2
 import math
 from ultralytics import YOLO, solutions
+import time
 
 class FrameProcessor:
-    def __init__(self, cap, num_reg, ref_frame = None, conf_tresh = 0.4):
+    def __init__(self, cap, num_reg, ref_frame = None, conf_tresh = 0.3):
         self.cap = cap
         self.width = cap.get(cv2.CAP_PROP_FRAME_WIDTH)
         self.height = cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
@@ -12,6 +13,7 @@ class FrameProcessor:
         self.num_reg = num_reg
         self.regions = self.get_regions(num_reg, self.width, self.height)
         if ref_frame is None:
+          time.sleep(0.5)
           _, self.ref_frame = cap.read()
         else:
           self.ref_frame = ref_frame
@@ -76,7 +78,7 @@ class FrameProcessor:
           # if the confidence is greater than the minimum confidence,
           # draw the bounding box on the frame
           temp_count = temp_count+1
-          xmin, ymin, xmax, ymax = int(data[0]), int(data[1]), int(data[2]), int(data[3])
+          #xmin, ymin, xmax, ymax = int(data[0]), int(data[1]), int(data[2]), int(data[3])
           #cv2.rectangle(detected, (xmin, ymin), (xmax, ymax), (255, 0, 0), 2)
 
       self.count = max(self.count, temp_count)

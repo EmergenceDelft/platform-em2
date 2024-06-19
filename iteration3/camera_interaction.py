@@ -24,13 +24,26 @@ def normalize_score(score):
     max_log_diff = math.log1p(255)  # log1p(255) is the maximum possible log-scaled difference
     normalized_score = int((scaled_diff / max_log_diff) * 127)
     return int(normalized_score)
-def send_means(midi_sender, mean_score, grid_scores):
+def send_midi(midi_sender, mean_score, grid_scores, object_counts, send_max = False):
     midi_sender.send_control_change(0, 0, mean_score)
+    midi_sender.send_control_change(0, len(grid_scores)+1, object_counts)
+
+    midi_scores = np.zeros(len(grid_scores))
+    if send_max:
+        #compute max difference and send 100
+        midi_scores[np.argmax(grid_scores)] = 100
+
+    else:
+        midi_scores = grid_scores
 
     for i in range(1, len(grid_scores)+1):
-        midi_sender.send_control_change(channel = 0, control = i, value = grid_scores[i - 1])
+        midi_sender.send_control_change(channel = 0, control = i, value = int(midi_scores[i - 1]))
 
-def process_frame(current_frame, prev_frame, frame_processor):
+    print(f"Mean Difference Score: {mean_score}")
+    print(f"Midi Grid Scores: {grid_scores}")
+    print(f"Detection counts: {object_counts}")
+
+def process_frame(current_frame, prev_frame, frame_processor, detect = False):
     # Get difference from the frame
     mean_score = normalize_score(frame_processor.mean_score(prev_frame, current_frame))
     grid_scores = frame_processor.compute_grid_difference(frame_processor.ref_frame, current_frame)
@@ -38,11 +51,16 @@ def process_frame(current_frame, prev_frame, frame_processor):
     frame_processor.display_difference(frame_processor.ref_frame, current_frame)
 
     # track objects
-    #new_frame, obj_counts = frame_processor.detect_people(current_frame)
-    #cv2.imshow(new_frame)
-    return mean_score, grid_scores, 0
+    if detect:
+        new_frame, obj_counts = frame_processor.detect_people(current_frame)
+        cv2.imshow("Detection", new_frame)
+    return mean_score, grid_scores, obj_counts
 def main():
     cap = cv2.VideoCapture(0)
+    RESTART_DETECTION = 5
+    DETECT = True
+    BLUR = 9
+    REG = 2
     
     if not cap.isOpened():
         print("Error: Could not open video source.")
@@ -60,10 +78,8 @@ def main():
     midi_sender = MidiSender('platform midi Port 1')
 
     # Setup frame processor
-    frame_processor = FrameProcessor(cap, num_reg = 2, ref_frame = prev_frame)
-    # frame_processor.setup_counter([(10, 10), (10, frame_processor.height-10),
-    #                                (frame_processor.width-10, frame_processor.height-10),
-    #                                (frame_processor.width-10, 10)])
+    frame_processor = FrameProcessor(cap, num_reg = REG)
+
     start = datetime.datetime.now()
 
     while True:
@@ -71,24 +87,20 @@ def main():
         ret, current_frame = cap.read()
         now = datetime.datetime.now()
         total = (now - start).total_seconds()
-        #print(total)
-        if total > 1:
-            print("Detection counts:", object_counts)
+
+        if total > RESTART_DETECTION:
+
             frame_processor.restart_count()
             start = datetime.datetime.now()
         # Blur the frame to get rid of the noise
-        current_frame = frame_processor.blur_frame(current_frame, kernel_size = (9,9))
+        current_frame = frame_processor.blur_frame(current_frame, kernel_size = (BLUR,BLUR))
         if not ret:
             break
 
-        mean_score, grid_scores, object_counts = process_frame(current_frame, prev_frame, frame_processor)
+        mean_score, grid_scores, object_counts = process_frame(current_frame, prev_frame, frame_processor, detect = DETECT)
 
         # send the scores through midi
-        send_means(midi_sender, mean_score, grid_scores)
-
-        print(f"Mean Difference Score: {mean_score}")
-        print(f"Grid Difference Score: {grid_scores}")
-
+        send_midi(midi_sender, mean_score, grid_scores, object_counts)
 
         # Update the previous frame
         prev_frame = current_frame.copy()

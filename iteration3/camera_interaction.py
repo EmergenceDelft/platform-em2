@@ -8,6 +8,14 @@ from midi_sender import MidiSender
 from frame_processor import FrameProcessor
 import datetime
 
+RESTART_DETECTION = 5
+REFRESH = 0.1
+DETECT = False
+BLUR = 9
+REG = 2
+MOVEMENT_CLIP = (5, 150)
+GRID_CLIP = (5, 150)
+DEBUG = True
 def list_midi_ports():
     ports = mido.get_output_names()
     print("Available MIDI Output Ports:")
@@ -15,18 +23,21 @@ def list_midi_ports():
         print(port)
     return ports
 
-def normalize_score(score):
-    """Get's the score in range (0, 255) and it normalizes it to (0, 127). It applies log scale."""
+def normalize_score(score, clip = (5, 150)):
+    """Get's the score in range (0, 255) applies log scale, normalizes it to (0, 127)."""
     # Apply logarithmic scaling to give more weight to smaller changes
+    score = np.clip(score, clip[0], clip[1]) - clip[0]
     scaled_diff = math.log1p(score)  # log1p(x) = log(1 + x)
 
     # Normalize the scaled difference to a value between 0 and 4096
-    max_log_diff = math.log1p(255)  # log1p(255) is the maximum possible log-scaled difference
+    max_log_diff = math.log1p(clip[1])  # log1p(255) is the maximum possible log-scaled difference
     normalized_score = int((scaled_diff / max_log_diff) * 127)
     return int(normalized_score)
-def send_midi(midi_sender, mean_score, grid_scores, object_counts, send_max = False):
+
+def send_midi(midi_sender, mean_score, grid_scores, object_counts, center_score, send_max = False, show = True):
     midi_sender.send_control_change(0, 0, mean_score)
     midi_sender.send_control_change(0, len(grid_scores)+1, object_counts)
+    midi_sender.send_control_change(0, len(grid_scores) + 2, center_score)
 
     midi_scores = np.zeros(len(grid_scores))
     if send_max:
@@ -39,28 +50,33 @@ def send_midi(midi_sender, mean_score, grid_scores, object_counts, send_max = Fa
     for i in range(1, len(grid_scores)+1):
         midi_sender.send_control_change(channel = 0, control = i, value = int(midi_scores[i - 1]))
 
-    print(f"Mean Difference Score: {mean_score}")
-    print(f"Midi Grid Scores: {grid_scores}")
-    print(f"Detection counts: {object_counts}")
+    if show:
+        print(f"Mean Difference Score: {mean_score}")
+        print(f"Midi Grid Scores: {grid_scores}")
+        print(f"Detection counts: {object_counts}")
+        print(f"Center Score: {center_score}\n ------")
 
-def process_frame(current_frame, prev_frame, frame_processor, detect = False):
+def process_frame(current_frame, prev_frame, frame_processor, show=True):
     # Get difference from the frame
-    mean_score = normalize_score(frame_processor.mean_score(prev_frame, current_frame))
+    mean_score = normalize_score(frame_processor.mean_score(prev_frame, current_frame), MOVEMENT_CLIP)
     grid_scores = frame_processor.compute_grid_difference(frame_processor.ref_frame, current_frame)
-    grid_scores = [normalize_score(s) for s in grid_scores.flatten()]
-    frame_processor.display_difference(frame_processor.ref_frame, current_frame)
+    #print(f"Grid scores", grid_scores)
+    grid_scores = [normalize_score(s, GRID_CLIP) for s in grid_scores.flatten()]
 
-    # track objects
-    if detect:
-        new_frame, obj_counts = frame_processor.detect_people(current_frame)
-        cv2.imshow("Detection", new_frame)
-    return mean_score, grid_scores, obj_counts
+    # compute score in the middle
+    r = int(frame_processor.height // 6)
+    masked_curr, mask = frame_processor.mask_circle(current_frame, r)
+    masked_ref, _ = frame_processor.mask_circle(frame_processor.ref_frame, r)
+    center_score = normalize_score(frame_processor.compute_diff(masked_ref, masked_curr).sum()/(mask.sum()/255), GRID_CLIP)
+
+    if show:
+        frame_processor.display_difference(frame_processor.ref_frame, current_frame, "Grid Difference")
+        frame_processor.display_difference(prev_frame, current_frame, "Movement")
+        frame_processor.display_difference(masked_ref, masked_curr, "Circle")
+
+    return mean_score, grid_scores, center_score
 def main():
     cap = cv2.VideoCapture(0)
-    RESTART_DETECTION = 5
-    DETECT = True
-    BLUR = 9
-    REG = 2
     
     if not cap.isOpened():
         print("Error: Could not open video source.")
@@ -78,32 +94,34 @@ def main():
     midi_sender = MidiSender('platform midi Port 1')
 
     # Setup frame processor
-    frame_processor = FrameProcessor(cap, num_reg = REG)
+    frame_processor = FrameProcessor(cap, blur_kernel = (BLUR, BLUR), num_reg = REG)
 
-    start = datetime.datetime.now()
+    start_det = datetime.datetime.now()
+    start_mov = start_det
 
     while True:
-        time.sleep(0.04)
+        time.sleep(REFRESH)
         ret, current_frame = cap.read()
-        now = datetime.datetime.now()
-        total = (now - start).total_seconds()
-
-        if total > RESTART_DETECTION:
-
-            frame_processor.restart_count()
-            start = datetime.datetime.now()
-        # Blur the frame to get rid of the noise
-        current_frame = frame_processor.blur_frame(current_frame, kernel_size = (BLUR,BLUR))
         if not ret:
             break
+        now = datetime.datetime.now()
 
-        mean_score, grid_scores, object_counts = process_frame(current_frame, prev_frame, frame_processor, detect = DETECT)
+        if (now - start_det).total_seconds() > RESTART_DETECTION:
+            frame_processor.restart_count()
+            start_det = datetime.datetime.now()
+
+        object_counts = 0
+        # track objects
+        if DETECT:
+            new_frame, object_counts = frame_processor.detect_people(current_frame)
+
+        # Blur the frame to get rid of the noise
+        current_frame = frame_processor.blur_frame(current_frame)
+
+        mean_score, grid_scores, center_score = process_frame(current_frame, prev_frame, frame_processor, show = DEBUG)
 
         # send the scores through midi
-        send_midi(midi_sender, mean_score, grid_scores, object_counts)
-
-        # Update the previous frame
-        prev_frame = current_frame.copy()
+        send_midi(midi_sender, mean_score, grid_scores, object_counts, center_score, show = DEBUG)
         
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break

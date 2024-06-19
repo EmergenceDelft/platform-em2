@@ -5,21 +5,26 @@ from ultralytics import YOLO, solutions
 import time
 
 class FrameProcessor:
-    def __init__(self, cap, num_reg, ref_frame = None, conf_tresh = 0.3):
+    def __init__(self, cap, num_reg, blur_kernel, ref_frame = None, conf_tresh = 0.3):
         self.cap = cap
         self.width = cap.get(cv2.CAP_PROP_FRAME_WIDTH)
         self.height = cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
         self.model = YOLO("yolov8n.pt")
         self.num_reg = num_reg
         self.regions = self.get_regions(num_reg, self.width, self.height)
+        self.blur_kernel = blur_kernel
+
+        # Add reference frame
         if ref_frame is None:
           time.sleep(0.5)
           _, self.ref_frame = cap.read()
         else:
           self.ref_frame = ref_frame
+        self.blur_frame(self.ref_frame)
+
         self.count = 0
         self.conf_tresh = conf_tresh
-        print("Frame regions: ", self.regions)
+
 
     def get_regions(self, number, width, height):
       # Calculate the size of each region
@@ -61,9 +66,33 @@ class FrameProcessor:
 
       return frame[:crop_height, :crop_width]
 
-    def blur_frame (self, frame, kernel_size=(5, 5)):
-      return cv2.GaussianBlur(frame, kernel_size, 0)
+    def blur_frame (self, frame):
+      return cv2.GaussianBlur(frame, self.blur_kernel, 0)
 
+    def mask_circle (self, frame, radius, circle_center=None):
+      # Convert the frame to grayscale if needed
+      # gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+
+      if circle_center is None:
+        circle_center = (int(self.width // 2), int(self.height // 2))
+      if radius is None:
+        radius = int(min(self.width, self.height) // 4) # Default to one-fourth of the smaller dimension
+
+      # Create a mask with the same dimensions as the frame
+      mask = np.zeros((int(self.height), int(self.width)), dtype = np.uint8)
+
+      # Draw a filled white circle in the middle of the mask
+      cv2.circle(mask, circle_center, radius, 255, -1)
+
+
+      # Create a 3-channel version of the inverted mask if the frame is colored
+      if len(frame.shape) == 3:
+        mask = cv2.cvtColor(mask, cv2.COLOR_GRAY2BGR)
+
+      # Apply the inverted mask to the frame
+      masked_frame = cv2.bitwise_and(frame, mask)
+
+      return masked_frame, mask
     def detect_people(self, frame):
       detections = self.model(frame)[0]
       detected = frame
@@ -127,7 +156,7 @@ class FrameProcessor:
 
       return mean_diff
 
-    def display_difference (self, frame1, frame2):
+    def display_difference (self, frame1, frame2, title):
       """
       Display the difference between two frames with a 3x3 grid overlay.
 
@@ -148,4 +177,4 @@ class FrameProcessor:
         cv2.line(gray_diff, (i * width // self.num_reg, 0), (i * width // self.num_reg, height), (255, 255, 255), 2)
 
       # Display the difference image with grid lines
-      cv2.imshow("Difference with Grid", gray_diff)
+      cv2.imshow(title, gray_diff)

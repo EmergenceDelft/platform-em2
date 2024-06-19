@@ -89,7 +89,7 @@ class FrameProcessor:
 
     def compute_grid_difference(self, frame1, frame2):
         """
-        Compute the absolute difference between two frames divided into a 3x3 grid.
+        Compute the absolute difference between two frames divided into a grid.
 
         :param frame1: First frame as a NumPy array.
         :param frame2: Second frame as a NumPy array.

@@ -35,12 +35,12 @@ def process_frame(current_frame, prev_frame, frame_processor):
     mean_score = normalize_score(frame_processor.mean_score(prev_frame, current_frame))
     grid_scores = frame_processor.compute_grid_difference(frame_processor.ref_frame, current_frame)
     grid_scores = [normalize_score(s) for s in grid_scores.flatten()]
-    frame_processor.display_difference(prev_frame, current_frame)
+    frame_processor.display_difference(frame_processor.ref_frame, current_frame)
 
     # track objects
-    new_frame, obj_counts = frame_processor.detect_people(current_frame)
+    #new_frame, obj_counts = frame_processor.detect_people(current_frame)
     #cv2.imshow(new_frame)
-    return mean_score, grid_scores, obj_counts
+    return mean_score, grid_scores, 0
 def main():
     cap = cv2.VideoCapture(0)
     
@@ -71,8 +71,9 @@ def main():
         ret, current_frame = cap.read()
         now = datetime.datetime.now()
         total = (now - start).total_seconds()
-        print(total)
+        #print(total)
         if total > 1:
+            print("Detection counts:", object_counts)
             frame_processor.restart_count()
             start = datetime.datetime.now()
         # Blur the frame to get rid of the noise
@@ -85,9 +86,9 @@ def main():
         # send the scores through midi
         send_means(midi_sender, mean_score, grid_scores)
 
-        #print(f"Mean Difference Score: {mean_score}")
-        #print(f"Grid Difference Score: {grid_scores}")
-        print("Detection counts:", object_counts)
+        print(f"Mean Difference Score: {mean_score}")
+        print(f"Grid Difference Score: {grid_scores}")
+
 
         # Update the previous frame
         prev_frame = current_frame.copy()

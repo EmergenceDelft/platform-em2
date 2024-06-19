@@ -4,7 +4,7 @@ import time
 midi_sender = MidiSender('platform midi Port 1')
 
 # change to activate different cc
-activate_cc = 4
+activate_cc = 0
 
 while True:
 

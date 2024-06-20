@@ -5,7 +5,7 @@ from ultralytics import YOLO, solutions
 import time
 
 class FrameProcessor:
-    def __init__(self, cap, num_reg, blur_kernel, ref_frame = None, conf_tresh = 0.3):
+    def __init__(self, cap, num_reg, blur_kernel, ref_frame = None, diff_thresh = 15, conf_tresh = 0.3):
         self.cap = cap
         self.width = cap.get(cv2.CAP_PROP_FRAME_WIDTH)
         self.height = cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
@@ -13,6 +13,7 @@ class FrameProcessor:
         self.num_reg = num_reg
         self.regions = self.get_regions(num_reg, self.width, self.height)
         self.blur_kernel = blur_kernel
+        self.diff_thresh = diff_thresh
 
         # Add reference frame
         if ref_frame is None:
@@ -116,6 +117,8 @@ class FrameProcessor:
     def compute_diff(self, frame1, frame2):
       diff = cv2.absdiff(frame1, frame2)
       gray_diff = cv2.cvtColor(diff, cv2.COLOR_BGR2GRAY)
+      gray_diff = cv2.threshold(gray_diff, self.diff_thresh, 255, cv2.THRESH_BINARY)[1]
+      gray_diff = cv2.dilate(gray_diff, None)
       return gray_diff
 
     def compute_grid_difference(self, frame1, frame2):
@@ -150,7 +153,6 @@ class FrameProcessor:
     def mean_score (self, frame1, frame2):
       # Compute the absolute difference between the frames
       diff = self.compute_diff(frame1, frame2)
-
       # Compute the mean of the grayscale difference
       mean_diff = np.mean(diff)
 

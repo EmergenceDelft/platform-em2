@@ -10,12 +10,18 @@ import datetime
 
 RESTART_DETECTION = 5
 REFRESH = 0.1
-DETECT = False
-BLUR = 9
+
+BLUR = 21
+CENTER_PARAM = 6
 REG = 2
-MOVEMENT_CLIP = (5, 150)
-GRID_CLIP = (5, 150)
+
+MOVEMENT_CLIP = (0, 10)
+GRID_CLIP = (5, 100)
+CIRCLE_CLIP = (0, 30)
+
 DEBUG = True
+DETECT = True
+
 def list_midi_ports():
     ports = mido.get_output_names()
     print("Available MIDI Output Ports:")
@@ -30,13 +36,13 @@ def normalize_score(score, clip = (5, 150)):
     scaled_diff = math.log1p(score)  # log1p(x) = log(1 + x)
 
     # Normalize the scaled difference to a value between 0 and 4096
-    max_log_diff = math.log1p(clip[1])  # log1p(255) is the maximum possible log-scaled difference
+    max_log_diff = math.log1p(clip[1] - clip[0])  # log1p(255) is the maximum possible log-scaled difference
     normalized_score = int((scaled_diff / max_log_diff) * 127)
     return int(normalized_score)
 
 def send_midi(midi_sender, mean_score, grid_scores, object_counts, center_score, send_max = False, show = True):
     midi_sender.send_control_change(0, 0, mean_score)
-    midi_sender.send_control_change(0, len(grid_scores)+1, object_counts)
+
     midi_sender.send_control_change(0, len(grid_scores) + 2, center_score)
 
     midi_scores = np.zeros(len(grid_scores))
@@ -50,24 +56,33 @@ def send_midi(midi_sender, mean_score, grid_scores, object_counts, center_score,
     for i in range(1, len(grid_scores)+1):
         midi_sender.send_control_change(channel = 0, control = i, value = int(midi_scores[i - 1]))
 
+
+    # send number of people
+    object_counts = np.clip(object_counts, 0, 10)
+    midi_sender.send_control_change(0, len(grid_scores) + 1, int(object_counts * 12))
+
     if show:
-        print(f"Mean Difference Score: {mean_score}")
-        print(f"Midi Grid Scores: {grid_scores}")
+        # print(f"Mean Difference Score: {mean_score}")
+        # print(f"Midi Grid Scores: {grid_scores}")
         print(f"Detection counts: {object_counts}")
-        print(f"Center Score: {center_score}\n ------")
+        # print(f"Center Score: {center_score}\n ------")
 
 def process_frame(current_frame, prev_frame, frame_processor, show=True):
     # Get difference from the frame
-    mean_score = normalize_score(frame_processor.mean_score(prev_frame, current_frame), MOVEMENT_CLIP)
+    mean_score = frame_processor.mean_score(prev_frame, current_frame)
+    #print("Mean score:", mean_score)
+    mean_score = normalize_score(mean_score, MOVEMENT_CLIP)
     grid_scores = frame_processor.compute_grid_difference(frame_processor.ref_frame, current_frame)
-    #print(f"Grid scores", grid_scores)
+    #print("Grid scores", grid_scores.flatten())
     grid_scores = [normalize_score(s, GRID_CLIP) for s in grid_scores.flatten()]
 
     # compute score in the middle
-    r = int(frame_processor.height // 6)
+    r = int(frame_processor.height // CENTER_PARAM)
     masked_curr, mask = frame_processor.mask_circle(current_frame, r)
     masked_ref, _ = frame_processor.mask_circle(frame_processor.ref_frame, r)
-    center_score = normalize_score(frame_processor.compute_diff(masked_ref, masked_curr).sum()/(mask.sum()/255), GRID_CLIP)
+    center_score = frame_processor.compute_diff(masked_ref, masked_curr).sum()/(mask.sum()/255)
+    #print("Circle clip score", center_score)
+    center_score = normalize_score(center_score, CIRCLE_CLIP)
 
     if show:
         frame_processor.display_difference(frame_processor.ref_frame, current_frame, "Grid Difference")
@@ -76,7 +91,7 @@ def process_frame(current_frame, prev_frame, frame_processor, show=True):
 
     return mean_score, grid_scores, center_score
 def main():
-    cap = cv2.VideoCapture(0)
+    cap = cv2.VideoCapture("in-the-dark.mp4")
     
     if not cap.isOpened():
         print("Error: Could not open video source.")
@@ -94,13 +109,13 @@ def main():
     midi_sender = MidiSender('platform midi Port 1')
 
     # Setup frame processor
-    frame_processor = FrameProcessor(cap, blur_kernel = (BLUR, BLUR), num_reg = REG)
+    frame_processor = FrameProcessor(cap, blur_kernel = (BLUR, BLUR), num_reg = REG, diff_thresh = 15)
 
     start_det = datetime.datetime.now()
     start_mov = start_det
 
     while True:
-        time.sleep(REFRESH)
+        #time.sleep(REFRESH)
         ret, current_frame = cap.read()
         if not ret:
             break
@@ -114,12 +129,16 @@ def main():
         # track objects
         if DETECT:
             new_frame, object_counts = frame_processor.detect_people(current_frame)
+            #print("Object counts:", object_counts)
 
         # Blur the frame to get rid of the noise
         current_frame = frame_processor.blur_frame(current_frame)
+        if show:
+            cv2.imshow("Curent", current_frame)
 
         mean_score, grid_scores, center_score = process_frame(current_frame, prev_frame, frame_processor, show = DEBUG)
 
+        prev_frame = current_frame.copy()
         # send the scores through midi
         send_midi(midi_sender, mean_score, grid_scores, object_counts, center_score, show = DEBUG)
         

@@ -2,6 +2,10 @@ import time
 from google.cloud import texttospeech
 from pydub import AudioSegment
 from pydub.playback import play
+import sounddevice as sd
+import soundfile as sf
+
+
 
 def synthesize_text(text):
     """Synthesizes speech from the input string of text."""
@@ -14,8 +18,8 @@ def synthesize_text(text):
     # Specify the voice parameters
     voice = texttospeech.VoiceSelectionParams(
         language_code="en-US",
-        name="en-US-Neural2-C",
-        ssml_gender=texttospeech.SsmlVoiceGender.FEMALE,
+        name="en-US-casual-K",
+        ssml_gender=texttospeech.SsmlVoiceGender.MALE,
     )
 
     # Specify the audio configuration
@@ -47,8 +51,7 @@ def play_audio(file_path):
     play(audio)
 
 # Path to the input .txt file
-input_file_path = r"C:\Users\simon\Documents\1Simon\emergence\platform\experiment\live transcription\test_text_for_transr_1.txt"
-
+input_file_path = r"C:\Users\simon\Documents\1Simon\emergence\platform\experiment\live transcription\at_home_testing.txt"
 while True:
     # Read text from the file
     input_text = read_text_from_file(input_file_path)
@@ -56,8 +59,8 @@ while True:
     # Synthesize text to speech and get the path of the output audio file
     audio_file_path = synthesize_text(input_text)
     
-    # Play the generated audio file
+    #Play the generated audio file
     play_audio(audio_file_path)
     
-    # Wait for 15 seconds before repeating
-    time.sleep(16)
+    # Wait for 10 seconds before repeating
+    time.sleep(20)

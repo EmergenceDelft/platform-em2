@@ -3,9 +3,9 @@ import soundfile as sf
 import sounddevice as sd
 from macos_speech import Synthesizer
 import time
-import pyttsx3
+#import pyttsx3
 
-mac = False
+mac = True
 # Path to the input .txt file
 input_file_path = "audio_files/at_home_testing.txt"
 audio_file_path = 'audio_files/mac_computer.aiff'

@@ -9,7 +9,7 @@ class FrameProcessor:
         self.cap = cap
         self.width = cap.get(cv2.CAP_PROP_FRAME_WIDTH)
         self.height = cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
-        self.model = YOLO("yolov8n.pt")
+        self.model = YOLO("yolov8m.pt")
         self.num_reg = num_reg
         self.regions = self.get_regions(num_reg, self.width, self.height)
         self.blur_kernel = blur_kernel
@@ -84,7 +84,6 @@ class FrameProcessor:
 
       # Draw a filled white circle in the middle of the mask
       cv2.circle(mask, circle_center, radius, 255, -1)
-
 
       # Create a 3-channel version of the inverted mask if the frame is colored
       if len(frame.shape) == 3:
@@ -179,4 +178,6 @@ class FrameProcessor:
         cv2.line(gray_diff, (i * width // self.num_reg, 0), (i * width // self.num_reg, height), (255, 255, 255), 2)
 
       # Display the difference image with grid lines
+      cv2.namedWindow(title, cv2.WINDOW_KEEPRATIO)
       cv2.imshow(title, gray_diff)
+      cv2.resizeWindow(title, 320, 180)

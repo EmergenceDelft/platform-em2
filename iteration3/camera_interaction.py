@@ -19,7 +19,7 @@ MOVEMENT_CLIP = (0, 10)
 GRID_CLIP = (5, 100)
 CIRCLE_CLIP = (0, 30)
 
-DEBUG = True
+DEBUG = False
 DETECT = True
 
 def list_midi_ports():
@@ -61,11 +61,11 @@ def send_midi(midi_sender, mean_score, grid_scores, object_counts, center_score,
     object_counts = np.clip(object_counts, 0, 10)
     midi_sender.send_control_change(0, len(grid_scores) + 1, int(object_counts * 12))
 
-    if show:
-        # print(f"Mean Difference Score: {mean_score}")
-        # print(f"Midi Grid Scores: {grid_scores}")
-        print(f"Detection counts: {object_counts}")
-        # print(f"Center Score: {center_score}\n ------")
+
+    # print(f"Mean Difference Score: {mean_score}")
+    # print(f"Midi Grid Scores: {grid_scores}")
+    print(f"Detection counts: {object_counts}")
+    # print(f"Center Score: {center_score}\n ------")
 
 def process_frame(current_frame, prev_frame, frame_processor, show=True):
     # Get difference from the frame
@@ -112,18 +112,23 @@ def main():
     frame_processor = FrameProcessor(cap, blur_kernel = (BLUR, BLUR), num_reg = REG, diff_thresh = 15)
 
     start_det = datetime.datetime.now()
-    start_mov = start_det
-
+    start = datetime.datetime.now()
     while True:
         #time.sleep(REFRESH)
         ret, current_frame = cap.read()
         if not ret:
             break
         now = datetime.datetime.now()
-
+        print("Processing time:", (now - start).total_seconds())
+        start = datetime.datetime.now()
         if (now - start_det).total_seconds() > RESTART_DETECTION:
             frame_processor.restart_count()
             start_det = datetime.datetime.now()
+
+        if DEBUG:
+            cv2.namedWindow("Live feed", cv2.WINDOW_KEEPRATIO)
+            cv2.imshow("Live feed", current_frame)
+            cv2.resizeWindow("Live feed", 320, 180)
 
         object_counts = 0
         # track objects
@@ -133,8 +138,6 @@ def main():
 
         # Blur the frame to get rid of the noise
         current_frame = frame_processor.blur_frame(current_frame)
-        if show:
-            cv2.imshow("Curent", current_frame)
 
         mean_score, grid_scores, center_score = process_frame(current_frame, prev_frame, frame_processor, show = DEBUG)
 

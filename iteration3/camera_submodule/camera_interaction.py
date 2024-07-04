@@ -11,18 +11,20 @@ import datetime
 RESTART_DETECTION = 5
 REFRESH = 0.5
 
-BLUR = 21
-CENTER_PARAM = 6
-REG = 2
+BLUR = 21 # controls kernel size of blur to remove the noise between frame comparisons
+CENTER_PARAM = 6 # controls the size of circle height\CENTER_PARAM
+REG = 2 # number of region REG x REG
 
+# controls how the values are trasformed to midi signals
 MOVEMENT_CLIP = (1.5, 10)
 GRID_CLIP = (10, 180)
 CIRCLE_CLIP = (0, 40)
 
-DEBUG = True
-DETECT = False
+DEBUG = True # change if you want to display video
+DETECT = False # change if you want to enable detection
 
-PORT = 'platform midi Port 1'
+# midi port
+PORT = 'platform midi Port 1' #
 
 def list_midi_ports():
     ports = mido.get_output_names()

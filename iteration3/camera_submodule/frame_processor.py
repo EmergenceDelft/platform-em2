@@ -5,11 +5,11 @@ from ultralytics import YOLO, solutions
 import time
 
 class FrameProcessor:
-    def __init__(self, cap, num_reg, blur_kernel, ref_frame = None, diff_thresh = 15, conf_tresh = 0.3):
+    def __init__(self, cap, num_reg, blur_kernel, diff_thresh, ref_frame = None, conf_tresh = 0.3):
         self.cap = cap
         self.width = cap.get(cv2.CAP_PROP_FRAME_WIDTH)
         self.height = cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
-        self.model = YOLO("yolov8m.pt")
+        self.model = YOLO("yolov8s.pt")
         self.num_reg = num_reg
         self.regions = self.get_regions(num_reg, self.width, self.height)
         self.blur_kernel = blur_kernel
@@ -21,7 +21,8 @@ class FrameProcessor:
           _, self.ref_frame = cap.read()
         else:
           self.ref_frame = ref_frame
-        self.blur_frame(self.ref_frame)
+
+        self.ref_frame = self.blur_frame(self.ref_frame)
 
         self.count = 0
         self.conf_tresh = conf_tresh
@@ -174,10 +175,10 @@ class FrameProcessor:
 
       # Draw the grid lines
       for i in range(1, self.num_reg):
-        cv2.line(gray_diff, (0, i * height // self.num_reg), (width, i * height // self.num_reg), (255, 255, 255), 2)
-        cv2.line(gray_diff, (i * width // self.num_reg, 0), (i * width // self.num_reg, height), (255, 255, 255), 2)
+        gray_diff = cv2.line(gray_diff, (0, i * height // self.num_reg), (width, i * height // self.num_reg), (255, 255, 255), 2)
+        gray_diff = cv2.line(gray_diff, (i * width // self.num_reg, 0), (i * width // self.num_reg, height), (255, 255, 255), 2)
 
       # Display the difference image with grid lines
       cv2.namedWindow(title, cv2.WINDOW_KEEPRATIO)
       cv2.imshow(title, gray_diff)
-      cv2.resizeWindow(title, 320, 180)
+      cv2.resizeWindow(title, 465, 270)

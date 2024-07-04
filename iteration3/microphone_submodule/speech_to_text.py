@@ -8,8 +8,8 @@ import time
 # Parameters
 DURATION = 15  # Duration to record in seconds
 TRANSCRIPTIONS = 4
-output_file = "audio_files/recorded_audio_1.wav"
-text_file_path = "audio_files/at_home_testing.txt"
+output_file = "../audio_files/recorded_audio_1.wav"
+text_file_path = "../audio_files/at_home_testing.txt"
 def record_audio(duration, output_file):
     # Record audio from the microphone
     try:

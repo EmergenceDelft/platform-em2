@@ -9,18 +9,20 @@ from frame_processor import FrameProcessor
 import datetime
 
 RESTART_DETECTION = 5
-REFRESH = 0.1
+REFRESH = 0.5
 
 BLUR = 21
 CENTER_PARAM = 6
 REG = 2
 
-MOVEMENT_CLIP = (0, 10)
-GRID_CLIP = (5, 100)
-CIRCLE_CLIP = (0, 30)
+MOVEMENT_CLIP = (1.5, 10)
+GRID_CLIP = (10, 180)
+CIRCLE_CLIP = (0, 40)
 
-DEBUG = False
-DETECT = True
+DEBUG = True
+DETECT = False
+
+PORT = 'platform midi Port 1'
 
 def list_midi_ports():
     ports = mido.get_output_names()
@@ -40,38 +42,30 @@ def normalize_score(score, clip = (5, 150)):
     normalized_score = int((scaled_diff / max_log_diff) * 127)
     return int(normalized_score)
 
-def send_midi(midi_sender, mean_score, grid_scores, object_counts, center_score, send_max = False, show = True):
-    midi_sender.send_control_change(0, 0, mean_score)
+def send_midi(midi_sender, mean_score, grid_scores, object_counts, center_score, show = True):
+    midi_sender.send_mean_movement(0, 0, mean_score)
 
-    midi_sender.send_control_change(0, len(grid_scores) + 2, center_score)
+    midi_sender.send_circle_score(0, len(grid_scores) + 2, circle = center_score)
 
-    midi_scores = np.zeros(len(grid_scores))
-    if send_max:
-        #compute max difference and send 100
-        midi_scores[np.argmax(grid_scores)] = 100
-
-    else:
-        midi_scores = grid_scores
-
-    for i in range(1, len(grid_scores)+1):
-        midi_sender.send_control_change(channel = 0, control = i, value = int(midi_scores[i - 1]))
-
+    midi_sender.send_grid_scores(channel = 0, grid_scores = grid_scores)
 
     # send number of people
-    object_counts = np.clip(object_counts, 0, 10)
-    midi_sender.send_control_change(0, len(grid_scores) + 1, int(object_counts * 12))
+    object_counts = int(np.clip(object_counts, 0, 10) * 12)
+    midi_sender.send_control_change(0, len(grid_scores) + 1, object_counts)
 
 
-    # print(f"Mean Difference Score: {mean_score}")
-    # print(f"Midi Grid Scores: {grid_scores}")
-    print(f"Detection counts: {object_counts}")
-    # print(f"Center Score: {center_score}\n ------")
+    print(f"Mean Difference Score: {mean_score}")
+    #print(f"Midi Grid Scores: {grid_scores}\n ------")
+    #print(f"Detection counts: {object_counts}")
+    #print(f"Center Score: {center_score}\n ------")
 
 def process_frame(current_frame, prev_frame, frame_processor, show=True):
-    # Get difference from the frame
+    # Get average movement from the camera
     mean_score = frame_processor.mean_score(prev_frame, current_frame)
-    #print("Mean score:", mean_score)
+    print("Mean score:", mean_score)
     mean_score = normalize_score(mean_score, MOVEMENT_CLIP)
+
+    # Get average difference in four zones
     grid_scores = frame_processor.compute_grid_difference(frame_processor.ref_frame, current_frame)
     #print("Grid scores", grid_scores.flatten())
     grid_scores = [normalize_score(s, GRID_CLIP) for s in grid_scores.flatten()]
@@ -91,7 +85,7 @@ def process_frame(current_frame, prev_frame, frame_processor, show=True):
 
     return mean_score, grid_scores, center_score
 def main():
-    cap = cv2.VideoCapture("in-the-dark.mp4")
+    cap = cv2.VideoCapture("Camera_interaction_video.mov")
     
     if not cap.isOpened():
         print("Error: Could not open video source.")
@@ -106,20 +100,21 @@ def main():
     available_ports = list_midi_ports()
     print(available_ports)
     
-    midi_sender = MidiSender('platform midi Port 1')
+    midi_sender = MidiSender(PORT)
 
+    #time.sleep(1)
     # Setup frame processor
-    frame_processor = FrameProcessor(cap, blur_kernel = (BLUR, BLUR), num_reg = REG, diff_thresh = 15)
+    frame_processor = FrameProcessor(cap = cap, num_reg = REG, blur_kernel = (BLUR, BLUR), diff_thresh = 20, ref_frame = prev_frame)
 
     start_det = datetime.datetime.now()
     start = datetime.datetime.now()
     while True:
-        #time.sleep(REFRESH)
+        time.sleep(REFRESH)
         ret, current_frame = cap.read()
         if not ret:
             break
         now = datetime.datetime.now()
-        print("Processing time:", (now - start).total_seconds())
+        #print("Processing time:", (now - start).total_seconds())
         start = datetime.datetime.now()
         if (now - start_det).total_seconds() > RESTART_DETECTION:
             frame_processor.restart_count()
@@ -128,7 +123,7 @@ def main():
         if DEBUG:
             cv2.namedWindow("Live feed", cv2.WINDOW_KEEPRATIO)
             cv2.imshow("Live feed", current_frame)
-            cv2.resizeWindow("Live feed", 320, 180)
+            cv2.resizeWindow("Live feed", 465, 270)
 
         object_counts = 0
         # track objects

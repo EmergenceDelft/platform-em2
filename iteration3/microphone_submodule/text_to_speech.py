@@ -7,7 +7,7 @@ import time
 
 mac = True
 # Path to the input .txt file
-input_file_path = "audio_files/at_home_testing.txt"
+input_file_path = "../audio_files/at_home_testing.txt"
 audio_file_path = 'audio_files/mac_computer.aiff'
 
 def read_text_from_file (file_path):

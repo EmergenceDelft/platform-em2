@@ -1,4 +1,4 @@
-# Iteration 3 Camera Submodule
+# Interaction 3 Camera Submodule
 This folder contains camera interaction scripts, those allow for tracking movement and people in the installation space.
 * The `setup.py` can be used to setup midi mappings by soloing specific CC.
 * The `camera_interaction.py` runs a camera and analyzes the live feed. It outputs 7 midi signals based on the detected movement and people.
@@ -30,6 +30,11 @@ number of seconds between restarting detection counter
 
 ## Camera interaction
 ### Setting up MIDI mappings
+1. Open `setup.py`
+1. Change `activate_cc` to the CC number you want to map
+2. Run `setup.py`
+3. Map correct device in Ableton
+4. Make sure to exit the script after mapping. Otherwise, the program will keep sending the MIDI signal. 
 
 ### Running camera interaction
 1. Make sure the physical environment is **empty and stable**.

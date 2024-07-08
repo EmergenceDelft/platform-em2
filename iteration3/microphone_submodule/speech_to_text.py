@@ -6,16 +6,18 @@ import whisper
 import time
 
 # Parameters
-DURATION = 15  # Duration to record in seconds
-TRANSCRIPTIONS = 4
-output_file = "../audio_files/recorded_audio_1.wav"
-text_file_path = "../audio_files/at_home_testing.txt"
+DURATION = 12  # Duration to record in seconds
+TRANSCRIPTIONS = 2
+
+
+output_file = "audio_files/recorded_audio_1.wav"
+text_file_path = "audio_files/at_home_testing.txt"
 def record_audio(duration, output_file):
     # Record audio from the microphone
     try:
         fs = 48000  # Sample rate
         print(f"Recording {duration} seconds of audio...")
-        recording = sd.rec(int(duration * fs), samplerate=fs, channels=2, dtype='int16')
+        recording = sd.rec(int(duration * fs), samplerate=fs, device = 1, dtype = 'int16', mapping=[2])
         sd.wait()  # Wait until recording is finished
         print("Recording finished")
         
@@ -29,7 +31,7 @@ def record_audio(duration, output_file):
             audio_array.tobytes(),
             frame_rate=fs,
             sample_width=audio_array.dtype.itemsize,
-            channels=2
+            channels=1
         )
         audio_segment.export(output_file, format="wav")
         print(f"Audio recorded and saved to {output_file}")
@@ -46,7 +48,7 @@ def transcribe_audio(model, file_path):
 
         # Transcribe the audio file
         print(f"Transcribing audio file {file_path}...")
-        result = model.transcribe(file_path)
+        result = model.transcribe(file_path, fp16=False)
         
         # Return the transcribed text
         transcription = result['text']

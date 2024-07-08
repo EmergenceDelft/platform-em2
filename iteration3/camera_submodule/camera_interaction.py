@@ -9,22 +9,20 @@ from frame_processor import FrameProcessor
 import datetime
 
 RESTART_DETECTION = 5
-REFRESH = 0.5
+REFRESH = 0.05
 
-BLUR = 21 # controls kernel size of blur to remove the noise between frame comparisons
-CENTER_PARAM = 6 # controls the size of circle height\CENTER_PARAM
-REG = 2 # number of region REG x REG
+BLUR = 21
+CENTER_PARAM = 4.2
+REG = 2
 
-# controls how the values are trasformed to midi signals
-MOVEMENT_CLIP = (1.5, 10)
+MOVEMENT_CLIP = (1.5, 100)
 GRID_CLIP = (10, 180)
-CIRCLE_CLIP = (0, 40)
+CIRCLE_CLIP = (7, 60)
 
-DEBUG = True # change if you want to display video
-DETECT = False # change if you want to enable detection
+DEBUG = True
+DETECT = False
 
-# midi port
-PORT = 'platform midi Port 1' #
+PORT = 'IAC Driver Bus 1'
 
 def list_midi_ports():
     ports = mido.get_output_names()
@@ -56,19 +54,20 @@ def send_midi(midi_sender, mean_score, grid_scores, object_counts, center_score,
     midi_sender.send_control_change(0, len(grid_scores) + 1, object_counts)
 
 
-    print(f"Mean Difference Score: {mean_score}")
-    #print(f"Midi Grid Scores: {grid_scores}\n ------")
+    #print(f"Mean Difference Score: {mean_score}\n ------")
+    print(f"Midi Grid Scores: {grid_scores}")
     #print(f"Detection counts: {object_counts}")
-    #print(f"Center Score: {center_score}\n ------")
+    print(f"Center Score: {center_score}\n ------")
 
 def process_frame(current_frame, prev_frame, frame_processor, show=True):
     # Get average movement from the camera
     mean_score = frame_processor.mean_score(prev_frame, current_frame)
-    print("Mean score:", mean_score)
+    #print("Mean score:", mean_score)
     mean_score = normalize_score(mean_score, MOVEMENT_CLIP)
 
     # Get average difference in four zones
     grid_scores = frame_processor.compute_grid_difference(frame_processor.ref_frame, current_frame)
+    grid_scores = grid_scores.flatten()[::-1]
     #print("Grid scores", grid_scores.flatten())
     grid_scores = [normalize_score(s, GRID_CLIP) for s in grid_scores.flatten()]
 
@@ -77,7 +76,7 @@ def process_frame(current_frame, prev_frame, frame_processor, show=True):
     masked_curr, mask = frame_processor.mask_circle(current_frame, r)
     masked_ref, _ = frame_processor.mask_circle(frame_processor.ref_frame, r)
     center_score = frame_processor.compute_diff(masked_ref, masked_curr).sum()/(mask.sum()/255)
-    #print("Circle clip score", center_score)
+    print("Circle clip score", center_score)
     center_score = normalize_score(center_score, CIRCLE_CLIP)
 
     if show:
@@ -87,7 +86,7 @@ def process_frame(current_frame, prev_frame, frame_processor, show=True):
 
     return mean_score, grid_scores, center_score
 def main():
-    cap = cv2.VideoCapture("Camera_interaction_video.mov")
+    cap = cv2.VideoCapture(0)
     
     if not cap.isOpened():
         print("Error: Could not open video source.")

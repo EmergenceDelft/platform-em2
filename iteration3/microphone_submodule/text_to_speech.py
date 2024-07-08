@@ -7,8 +7,10 @@ import time
 
 mac = True
 # Path to the input .txt file
-input_file_path = "../audio_files/at_home_testing.txt"
+input_file_path = "audio_files/at_home_testing.txt"
 audio_file_path = 'audio_files/mac_computer.aiff'
+WAIT = 5
+
 
 def read_text_from_file (file_path):
   """Reads text from a .txt file."""
@@ -40,48 +42,34 @@ def mac_say_text(speaker, text):
   speaker.say(text)
 
 
-def mac_say_text (speaker, recognized_text):
+def mac_say_text (speaker, recognized_text, file_name):
   print("I'm saying: " + recognized_text)
   speaker.say(recognized_text)
   try:
-    data, samplerate = sf.read('mac_computer.aiff')
-    sd.play(data, samplerate, device = 1, mapping = [30])
+    data, samplerate = sf.read(file_name)
+    sd.play(data, samplerate, device = 6, mapping=[40])
     sd.wait()
   except Exception as e:
     print(e)
-
-def windows_say_text (speaker, recognized_text):
-  print("I'm saying: " + recognized_text)
-  speaker.save_to_file(recognized_text, 'windows_computer.wav')
-  speaker.runAndWait()
-  try:
-    data, samplerate = sf.read('windows_computer.wav')
-    sd.play(data, samplerate, device = 3)
-    sd.wait()
-  except Exception as e:
-    print(e)
-
 
 def main():
   print(sd.query_devices())
 
-  if mac:
-    speaker = Synthesizer(outfile=audio_file_path)
-  else:
-    speaker = pyttsx3.init()
+  
+  speaker = Synthesizer(outfile=audio_file_path)
+  
 
   while True:
     # Read text from the file
     input_text = read_text_from_file(input_file_path)
 
-    if mac:
-      mac_say_text(speaker, input_text)
-    else:
-      windows_say_text(speaker, input_text)
+    
+    mac_say_text(speaker, input_text, audio_file_path)
+    
 
     # Wait for 22 seconds before repeating
-    print("Waiting for 22 seconds before repeating...")
-    time.sleep(22)
+    print(f"Waiting for {WAIT} seconds before repeating...")
+    time.sleep(WAIT)
 
 if __name__ == "__main__":
   main()

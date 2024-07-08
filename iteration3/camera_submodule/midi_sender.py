@@ -1,7 +1,8 @@
 import mido
 import numpy as np
+
 class MidiSender:
-  def __init__ (self, port_name=None, num_reg=4, smooth = 0.8):
+  def __init__ (self, port_name=None, num_reg=4, smooth = 0.5):
     """
     Initialize the MidiSender class.
 
@@ -41,28 +42,6 @@ class MidiSender:
     if self.output:
       self.output.close()
       self.output = None
-
-  def send_note_on (self, channel, note, velocity):
-    """
-    Send a Note On message.
-
-    :param channel: MIDI channel (0-15)
-    :param note: MIDI note number (0-127)
-    :param velocity: Note velocity (0-127)
-    """
-    msg = mido.Message('note_on', channel = channel, note = note, velocity = velocity)
-    self.output.send(msg)
-
-  def send_note_off (self, channel, note, velocity):
-    """
-    Send a Note Off message.
-
-    :param channel: MIDI channel (0-15)
-    :param note: MIDI note number (0-127)
-    :param velocity: Note velocity (0-127)
-    """
-    msg = mido.Message('note_off', channel = channel, note = note, velocity = velocity)
-    self.output.send(msg)
 
   def send_control_change (self, channel, control, value):
     """

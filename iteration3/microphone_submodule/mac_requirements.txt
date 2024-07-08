@@ -1,5 +1,0 @@
-sounddevice
-soundfile
-openai-whisper
-macos-speech
-pydub

@@ -7,8 +7,8 @@ import time
 
 mac = True
 # Path to the input .txt file
-input_file_path = "audio_files/at_home_testing.txt"
-audio_file_path = 'audio_files/mac_computer.aiff'
+input_file_path = "iteration3/microphone_submodule/audio_files/at_home_testing.txt"
+audio_file_path = 'iteration3/microphone_submodule/audio_files/mac_computer.aiff'
 WAIT = 5
 
 

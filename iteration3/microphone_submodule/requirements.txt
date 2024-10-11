@@ -3,3 +3,4 @@ soundfile
 openai-whisper
 macos-speech
 pydub
+librosa

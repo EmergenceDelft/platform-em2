@@ -62,8 +62,9 @@ In `speech_to_text.py`:
 ## Run instructions
 
 1. Make sure you are in the virtual environment/have all dependencies installed.
-2. If needed you can adjust parameters from [Parameters section](#parameters)
-2. Run both `speech_to_text.py` and `text_to_speech.py`
+2. Install ffmpeg using `brew install ffmpeg`
+3. If needed you can adjust parameters from [Parameters section](#parameters)
+4. Run both `speech_to_text.py` and `text_to_speech.py`
 
 ## Troubleshooting 
 Something doesn't work? Try this:

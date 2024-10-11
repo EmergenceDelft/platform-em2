@@ -26,7 +26,8 @@ number of seconds between restarting detection counter
 
 ### Before running the script
 1. Make sure you have all dependencies installed - look into general README.
-2. The first run of `camera_interaction.py` it might be necessary to download the model weights `yolov8s.pt`. 
+2. In the Audio MIDI Setup app on your Mac, choose Window > Show MIDI Studio and Enable IAC Driver Bus 1. You can look into [this tutorial](https://support.apple.com/en-gb/guide/audio-midi-setup/ams875bae1e0/mac) 
+3. The first run of `camera_interaction.py` it might be necessary to download the model weights `yolov8s.pt`. 
 
 ## Camera interaction
 ### Setting up MIDI mappings
